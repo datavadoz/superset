@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+export cicd_working_directory=$(dirname $(readlink -f "${BASH_SOURCE:-$0}"))

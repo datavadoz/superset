@@ -1,0 +1,85 @@
+x-superset-image: &superset-image ti-superset:1.0
+x-superset-depends-on: &superset-depends-on
+  - db
+  - redis
+
+version: "3.7"
+services:
+  redis:
+    image: redis:7
+    container_name: superset_cache
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+
+  db:
+    env_file: .env
+    image: postgres:14
+    container_name: superset_db
+    restart: unless-stopped
+    volumes:
+      - db_home:/var/lib/postgresql/data
+        #      - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
+  superset:
+    env_file: .env
+    image: *superset-image
+    container_name: superset_app
+    command: ["/app/theiconic/scripts/bootstrap.sh", "app-gunicorn"]
+    user: "root"
+    restart: unless-stopped
+    ports:
+      - 8088:8088
+    depends_on: *superset-depends-on
+
+  superset-init:
+    image: *superset-image
+    container_name: superset_init
+    command: ["/app/theiconic/scripts/init.sh"]
+    env_file: .env
+    depends_on: *superset-depends-on
+    user: "root"
+    healthcheck:
+      disable: true
+
+  superset-worker:
+    image: *superset-image
+    container_name: superset_worker
+    command: ["/app/theiconic/scripts/bootstrap.sh", "worker"]
+    env_file: .env
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    user: "root"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME",
+        ]
+
+  superset-worker-beat:
+    image: *superset-image
+    container_name: superset_worker_beat
+    command: ["/app/theiconic/scripts/bootstrap.sh", "beat"]
+    env_file: .env
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    user: "root"
+    healthcheck:
+      disable: true
+
+  pgadmin:
+    image: dpage/pgadmin4:6.19
+    env_file: .env
+    ports:
+      - "8000:80"
+    volumes:
+      - pgadmin-volume:/var/lib/pgadmin
+
+volumes:
+  pgadmin-volume:
+    external: false
+  db_home:
+    external: false
+  redis:
+    external: false
