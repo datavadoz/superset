@@ -19,7 +19,14 @@ services:
     restart: unless-stopped
     volumes:
       - db_home:/var/lib/postgresql/data
-        #      - ./docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
+  pgadmin:
+    image: dpage/pgadmin4:6.19
+    env_file: .env
+    ports:
+      - "8000:80"
+    volumes:
+      - pgadmin-volume:/var/lib/pgadmin
 
   superset:
     env_file: .env
@@ -67,14 +74,6 @@ services:
     user: "root"
     healthcheck:
       disable: true
-
-  pgadmin:
-    image: dpage/pgadmin4:6.19
-    env_file: .env
-    ports:
-      - "8000:80"
-    volumes:
-      - pgadmin-volume:/var/lib/pgadmin
 
 volumes:
   pgadmin-volume:
